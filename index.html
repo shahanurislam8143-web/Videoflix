@@ -28,7 +28,7 @@
             white-space: nowrap; scrollbar-width: none;
         }
         .categories::-webkit-scrollbar { display: none; }
-        .cat-chip { background: style="#334155"; color: var(--text-color); padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 14px; }
+        .cat-chip { background: #334155; color: var(--text-color); padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 14px; }
         .cat-chip.active { background: var(--accent-color); }
 
         .video-container { padding: 15px; display: grid; grid-template-columns: 1fr; gap: 15px; }
@@ -38,12 +38,11 @@
         .video-title { font-size: 16px; font-weight: 500; margin-bottom: 5px; }
         .video-meta { font-size: 12px; color: var(--text-muted); }
 
-        /* Modal & Ads */
         .modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center;
         }
-        .modal-content { background: var(--card-bg); padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; text-align: center; }
+        .modal-content { background: var(--card-bg); padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; text-align: center; max-height: 90vh; overflow-y: auto; }
         .close-btn { background: var(--accent-color); color: white; border: none; padding: 8px 16px; margin-top: 15px; border-radius: 4px; cursor: pointer; width: 100%; }
         
         select, input { width: 100%; padding: 10px; background: #334155; border: none; color: white; border-radius: 4px; margin-bottom: 10px; }
@@ -68,23 +67,23 @@
 
     <div class="video-container" id="videoList"></div>
 
-    <!-- অ্যাড পপআপ মডাল -->
     <div class="modal" id="adModal">
         <div class="modal-content">
             <h3 id="adTitle">বিজ্ঞাপন চলছে...</h3>
             <p id="adTimer" style="margin: 15px 0; color: var(--text-muted);">অপেক্ষা করুন...</p>
-            <div style="background: #334155; height: 150px; display: flex; align-items: center; justify-content: center; border-radius: 4px;">
-                <div id="dynamicAdContainer" style="color: var(--accent-color); font-weight: bold;">[AdMob / Monetag Ad Space]</div>
+            <div style="background: #334155; height: 150px; display: flex; align-items: center; justify-content: center; border-radius: 4px; overflow: hidden;">
+                <div id="dynamicAdContainer" style="color: var(--accent-color); font-weight: bold;">[Ad Space]</div>
             </div>
             <button class="close-btn" id="skipAdBtn" disabled style="opacity: 0.5;">অপেক্ষা করুন...</button>
         </div>
     </div>
 
-    <!-- সাবস্ক্রিপশন মডাল (প্যাকেজ অপশনসহ) -->
     <div class="modal" id="subModal">
         <div class="modal-content" style="text-align: left;">
             <h3 style="text-align: center; margin-bottom: 15px;">ভিআইপি সাবস্ক্রিপশন প্ল্যান</h3>
-            <p style="font-size: 14px; margin-bottom: 10px; color: var(--text-muted);">বিকাশ/নগদ (Personal): <b style="color:white;">01700-000000</b></p>
+            
+            <p style="font-size: 13px; margin-bottom: 5px; color: var(--text-muted);">বিকাশ/নগদ (Personal): <b style="color:white;" id="bkashDisplay">01700-000000</b></p>
+            <p style="font-size: 13px; margin-bottom: 10px; color: var(--text-muted);">বাইনান্স (Binance Pay ID / USDT): <b style="color:#f59e0b;" id="binanceDisplay">বাইনান্স আইডি সেট করা হয়নি</b></p>
             
             <label style="font-size: 13px; color: var(--text-muted);">প্যাকেজ সিলেক্ট করুন:</label>
             <select id="subPlan">
@@ -93,8 +92,11 @@
                 <option value="12">১ বছর - ১০০০ টাকা</option>
             </select>
 
-            <input type="text" id="userPhone" placeholder="আপনার মোবাইল নম্বর (পেমেন্টকৃত)">
-            <input type="text" id="trxId" placeholder="TrxID দিন">
+            <input type="text" id="userPhone" placeholder="আপনার মোবাইল নম্বর বা বাইনান্স অ্যাকাউন্ট">
+            <input type="text" id="trxId" placeholder="TrxID অথবা Binance Order ID দিন">
+            
+            <label style="font-size: 13px; color: var(--text-muted);">পেমেন্টের স্ক্রিনশট দিন (প্রমাণ):</label>
+            <input type="file" id="paymentScreenshot" accept="image/*">
             
             <button class="sub-btn" style="width: 100%; padding: 10px;" onclick="submitPayment()">সাবমিট করুন</button>
             <button class="close-btn" style="width: 100%; background: #475569; margin-top: 10px;" onclick="closeSubscription()">বন্ধ করুন</button>
@@ -102,45 +104,70 @@
     </div>
 
     <script>
-        const defaultVideos = [
-            { id: 1, title: "অসাধারণ একটি ভাইরাল মুহূর্ত!", category: "viral", thumb: "https://via.placeholder.com/400x200", url: "https://www.w3schools.com/html/mov_bbb.mp4" },
-            { id: 2, title: "আজকের সেরা ট্রেণ্ডি ক্লিপ", category: "trending", thumb: "https://via.placeholder.com/400x200", url: "https://www.w3schools.com/html/mov_bbb.mp4" },
-            { id: 3, title: "নতুন প্রকাশিত শর্ট ফিল্ম", category: "new", thumb: "https://via.placeholder.com/400x200", url: "https://www.w3schools.com/html/mov_bbb.mp4" }
-        ];
+        const DB_URL = "https://viral-602ed-default-rtdb.firebaseio.com";
 
-        let videos = JSON.parse(localStorage.getItem('siteVideos')) || defaultVideos;
+        let isVipActive = false;
+        let videos = [];
+        let currentFilter = 'all';
 
-        function checkVipStatus() {
-            const isVip = localStorage.getItem('isVip') === 'true';
-            const expiryDate = localStorage.getItem('vipExpiryDate');
-
-            if (isVip && expiryDate) {
-                const currentDate = new Date().getTime();
-                if (currentDate > parseInt(expiryDate)) {
-                    localStorage.setItem('isVip', 'false');
-                    localStorage.removeItem('vipExpiryDate');
-                    return false;
+        async function loadDataFromCloud() {
+            try {
+                let setRes = await fetch(`${DB_URL}/settings.json`);
+                let settings = await setRes.json();
+                if(settings) {
+                    if(settings.bkash) document.getElementById('bkashDisplay').innerText = settings.bkash;
+                    if(settings.binance) document.getElementById('binanceDisplay').innerText = settings.binance;
+                    if(settings.adCode) document.getElementById('dynamicAdContainer').innerHTML = settings.adCode;
                 }
-                return true;
-            }
-            return false;
+
+                let vidRes = await fetch(`${DB_URL}/videos.json`);
+                let vidData = await vidRes.json();
+                if(vidData) {
+                    videos = Object.values(vidData);
+                    renderVideos(currentFilter);
+                } else {
+                    videos = [];
+                    renderVideos(currentFilter);
+                }
+
+                checkVipStatus();
+            } catch(e) { console.error(e); }
         }
 
-        let isVipActive = checkVipStatus();
-
-        function checkVipStatusUI() {
-            if (isVipActive) {
-                document.getElementById('vipBadge').style.display = 'inline-block';
-                document.getElementById('subHeaderBtn').innerText = 'প্রিমিয়াম সক্রিয়';
-                document.getElementById('subHeaderBtn').style.background = '#64748b';
+        async function checkVipStatus() {
+            const userPhone = localStorage.getItem('myPhone');
+            if(userPhone) {
+                let res = await fetch(`${DB_URL}/approved_users/${userPhone}.json`);
+                let data = await res.json();
+                
+                if(data && data.expiry) {
+                    const now = new Date().getTime();
+                    if(now < data.expiry) {
+                        isVipActive = true;
+                        document.getElementById('vipBadge').style.display = 'inline-block';
+                        document.getElementById('subHeaderBtn').innerText = 'প্রিমিয়াম সক্রিয়';
+                        document.getElementById('subHeaderBtn').style.background = '#64748b';
+                        return;
+                    }
+                }
             }
+            isVipActive = false;
+            document.getElementById('vipBadge').style.display = 'none';
+            document.getElementById('subHeaderBtn').innerText = 'সাবস্ক্রিপশন নিন';
+            document.getElementById('subHeaderBtn').style.background = '#10b981';
         }
 
-        function renderVideos(filter = 'all') {
+        function renderVideos(filter) {
+            currentFilter = filter;
             const container = document.getElementById('videoList');
             container.innerHTML = '';
             const filtered = filter === 'all' ? videos : videos.filter(v => v.category === filter);
             
+            if(filtered.length === 0) {
+                container.innerHTML = `<p style="text-align:center; color: var(--text-muted); grid-column: 1/-1;">কোনো ভিডিও পাওয়া যায়নি</p>`;
+                return;
+            }
+
             filtered.forEach(video => {
                 container.innerHTML += `
                     <div class="video-card" onclick="handleVideoClick('${video.url}')">
@@ -161,7 +188,6 @@
         }
 
         function handleVideoClick(url) {
-            isVipActive = checkVipStatus();
             if (isVipActive) {
                 window.location.href = url; 
             } else {
@@ -172,12 +198,10 @@
         function startPreRollAds(url) {
             const modal = document.getElementById('adModal');
             modal.style.display = 'flex';
-            
-            const customAd = localStorage.getItem('customAdCode');
-            if(customAd) document.getElementById('dynamicAdContainer').innerHTML = customAd;
 
             runSingleAd(1, "প্রথম বিজ্ঞাপন", () => {
                 runSingleAd(2, "দ্বিতীয় বিজ্ঞাপন", () => {
+                    runSingleAd(3, "তৃতীয় বিজ্ঞাপন", () => {
                     modal.style.display = 'none';
                     setTimeout(() => { showMidRollAd(url); }, 3000); 
                     window.location.href = url;
@@ -194,7 +218,6 @@
             let timeLeft = 4; 
             skipBtn.disabled = true;
             skipBtn.style.opacity = 0.5;
-            skipBtn.innerText = "অপেক্ষা করুন...";
 
             const countdown = setInterval(() => {
                 timeLeft--;
@@ -220,7 +243,6 @@
             adTitle.innerText = "⚠️ স্পন্সরড মিড-রোল বিজ্ঞাপন";
             let timeLeft = 3;
             skipBtn.disabled = true;
-            skipBtn.style.opacity = 0.5;
 
             const midCountdown = setInterval(() => {
                 timeLeft--;
@@ -239,25 +261,55 @@
         function openSubscription() { if(!isVipActive) document.getElementById('subModal').style.display = 'flex'; }
         function closeSubscription() { document.getElementById('subModal').style.display = 'none'; }
         
-        function submitPayment() {
-            const phone = document.getElementById('userPhone').value;
-            const trx = document.getElementById('trxId').value;
-            const planMonths = document.getElementById('subPlan').value; // মাসের সংখ্যা (১, ৫ বা ১২)
+        async function submitPayment() {
+            const phone = document.getElementById('userPhone').value.trim();
+            const trx = document.getElementById('trxId').value.trim();
+            const planMonths = document.getElementById('subPlan').value;
+            const fileInput = document.getElementById('paymentScreenshot');
 
-            if(phone && trx) {
-                let pendingPayments = JSON.parse(localStorage.getItem('pendingPayments')) || [];
-                pendingPayments.push({ phone, trx, months: planMonths, date: new Date().toLocaleDateString() });
-                localStorage.setItem('pendingPayments', JSON.stringify(pendingPayments));
-
-                alert("আপনার পেমেন্ট সফলভাবে জমা হয়েছে! অ্যাডমিন যাচাই করে সাবস্ক্রিপশন সক্রিয় করে দিবেন।");
-                closeSubscription();
-            } else {
-                alert("দয়া করে আপনার ফোন নম্বর এবং ট্রানজেকশন আইডি দিন।");
+            if(!phone || !trx) {
+                alert("দয়া করে আপনার ফোন নম্বর/অ্যাকাউন্ট এবং ট্রানজেকশন আইডি দিন।");
+                return;
             }
+
+            if(fileInput.files.length === 0) {
+                alert("দয়া করে পেমেন্টের স্ক্রিনশট আপلود করুন!");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = async function(event) {
+                const base64Image = event.target.result;
+                const uniqueKey = phone.replace(/[^a-zA-Z0-9]/g, '_');
+
+                localStorage.setItem('myPhone', uniqueKey);
+                
+                try {
+                    await fetch(`${DB_URL}/payments/${uniqueKey}.json`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            phone: phone, 
+                            trx: trx, 
+                            months: planMonths, 
+                            screenshot: base64Image, 
+                            date: new Date().toLocaleDateString() 
+                        })
+                    });
+
+                    alert("আপনার পেমেন্ট ও স্ক্রিনশট সফলভাবে জমা হয়েছে! অ্যাডমিন যাচাই করে সাবস্ক্রিপশন সক্রিয় করে দিবেন।");
+                    closeSubscription();
+                } catch(e) {
+                    alert("পেমেন্ট সাবমিট করতে সমস্যা হয়েছে!");
+                }
+            };
+
+            reader.readAsDataURL(file);
         }
 
-        checkVipStatusUI();
-        renderVideos();
+        loadDataFromCloud();
     </script>
 </body>
 </html>
