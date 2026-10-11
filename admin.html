@@ -21,18 +21,20 @@
         .section h3 { margin-bottom: 15px; font-size: 18px; }
         
         input, textarea, select { width: 100%; padding: 10px; background: #334155; border: none; color: white; border-radius: 4px; margin-bottom: 12px; }
-        button { background: var(--success-color); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
+        button { background: var(--success-color); color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
         button.danger { background: var(--accent-color); }
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; font-size: 14px; vertical-align: middle; }
         th { background: #334155; }
+        label { font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
     <h2>⚙️ VideoFlix Live Cloud Admin Dashboard</h2>
 
+    <!-- ১. পেমেন্ট রিকোয়েস্ট সেকশন -->
     <div class="section">
         <h3>💰 ক্লাউড পেমেন্ট রিকোয়েস্ট ও স্ক্রিনশট প্রুফ</h3>
         <table>
@@ -49,6 +51,7 @@
         </table>
     </div>
 
+    <!-- ২. ভিডিও আপলোড সেকশন -->
     <div class="section">
         <h3>📤 লাইভ ভিডিও আপলোড করুন</h3>
         <input type="text" id="vidTitle" placeholder="ভিডিওর শিরোনাম">
@@ -74,22 +77,38 @@
         </table>
     </div>
 
+    <!-- ৩. পেমেন্ট তথ্য সেকশন -->
     <div class="section">
         <h3>💳 পেমেন্ট অ্যাকাউন্ট নম্বর ও বাইনান্স সেটআপ</h3>
-        <label style="font-size: 13px; color: var(--text-muted);">বিকাশ/নগদ নম্বর:</label>
+        <label>বিকাশ/নগদ নম্বর:</label>
         <input type="text" id="bkashNumber" placeholder="যেমন: 01700000000">
-        <input type="text" id="Binance Id" placeholder="যেমন: 0218640">
         
-        <label style="font-size: 13px; color: var(--text-muted);">বাইনান্স পে আইডি / ইউএসডিটি ওয়ালেট:</label>
-        <input type="text" id="binanceAccount" placeholder="যেমন: Binance Pay ID বা USDT Address">
+        <label>বাইনান্স পে আইডি / ইউএসডিটি ওয়ালেট:</label>
+        <input type="text" id="binanceAccount" placeholder="যেমন: Binance Pay ID / USDT Address">
         
         <button onclick="saveSettings()">পেমেন্ট তথ্য সেভ করুন</button>
     </div>
 
+    <!-- ৪. আলাদা আলাদা অ্যাড কোড ম্যানেজমেন্ট -->
     <div class="section">
-        <h3>📢 অ্যাডস কোড ম্যানেজমেন্ট</h3>
-        <textarea id="adScript" rows="5" placeholder="এখানে আপনার Monetag বা AdMob Script কোড পেস্ট করুন"></textarea>
-        <button onclick="saveAds()">অ্যাড কোড আপডেট করুন</button>
+        <h3>📢 অ্যাডস কোড ম্যানেজমেন্ট (আলাদা আলাদা অ্যাড সেটআপ)</h3>
+        
+        <label>১. হেডার ব্যানার অ্যাড কোড (Header Ad Code):</label>
+        <textarea id="adHeader" rows="3" placeholder="হেডারের জন্য অ্যাড কোড পেস্ট করুন"></textarea>
+
+        <label>২. ভিডিও প্লে মডাল অ্যাড কোড (Pre-Roll Video Modal Ad Code):</label>
+        <textarea id="adModalCode" rows="3" placeholder="ভিডিওতে ক্লিক করলে যে ১০ সেকেন্ডের অ্যাড দেখাবে তার কোড"></textarea>
+
+        <label>৩. ইন-ফিড ব্যানার অ্যাড কোড (ভিডিওর মাঝে মাঝে যে ব্যানার অ্যাড দেখাবে):</label>
+        <textarea id="adInfeed" rows="3" placeholder="প্রতি ২টি ভিডিওর পর পর দেখানোর জন্য ব্যানার অ্যাড কোড"></textarea>
+
+        <label>৪. ফুটার স্টিকি ব্যানার অ্যাড কোড (Footer Fixed Ad Code):</label>
+        <textarea id="adFooter" rows="3" placeholder="স্ক্রিনের নিচে ফিক্সড থাকবে এমন অ্যাড কোড"></textarea>
+
+        <label>৫. পপ-আপ / পপ-আন্ডার / Monetag Direct Link Script (ওয়েবসাইটে ঢুকলেই রান হবে):</label>
+        <textarea id="adPopup" rows="3" placeholder="সাইটে ক্লিক করলেই অন হওয়ার মতো পপআপ Script বা Direct Link Code"></textarea>
+
+        <button onclick="saveAds()">সব অ্যাড কোড আপডেট করুন</button>
     </div>
 
     <script>
@@ -102,7 +121,14 @@
                 if(settings) {
                     if(settings.bkash) document.getElementById('bkashNumber').value = settings.bkash;
                     if(settings.binance) document.getElementById('binanceAccount').value = settings.binance;
-                    if(settings.adCode) document.getElementById('adScript').value = settings.adCode;
+                    
+                    if(settings.ads) {
+                        document.getElementById('adHeader').value = settings.ads.header || '';
+                        document.getElementById('adModalCode').value = settings.ads.modal || '';
+                        document.getElementById('adInfeed').value = settings.ads.infeed || '';
+                        document.getElementById('adFooter').value = settings.ads.footer || '';
+                        document.getElementById('adPopup').value = settings.ads.popup || '';
+                    }
                 }
             } catch(e) { console.error(e); }
 
@@ -250,9 +276,21 @@
         }
 
         async function saveAds() {
-            const adCode = document.getElementById('adScript').value.trim();
-            await fetch(`${DB_URL}/settings/adCode.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(adCode) });
-            alert("✅ অ্যাড কোড আপডেট হয়েছে!");
+            const adsData = {
+                header: document.getElementById('adHeader').value.trim(),
+                modal: document.getElementById('adModalCode').value.trim(),
+                infeed: document.getElementById('adInfeed').value.trim(),
+                footer: document.getElementById('adFooter').value.trim(),
+                popup: document.getElementById('adPopup').value.trim()
+            };
+
+            await fetch(`${DB_URL}/settings/ads.json`, { 
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(adsData) 
+            });
+
+            alert("✅ সব আলাদা আলাদা অ্যাড কোড সফলভাবে আপডেট করা হয়েছে!");
         }
 
         loadAdminData();
