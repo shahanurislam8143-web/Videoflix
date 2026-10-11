@@ -13,7 +13,7 @@
             --text-muted: #94a3b8;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-color); padding-bottom: 70px; }
+        body { background-color: var(--bg-color); color: var(--text-color); padding-bottom: 100px; }
         
         header {
             display: flex; justify-content: space-between; align-items: center;
@@ -38,17 +38,25 @@
         .video-title { font-size: 16px; font-weight: 500; margin-bottom: 5px; }
         .video-meta { font-size: 12px; color: var(--text-muted); }
 
+        /* Ads Banners Containers */
+        .header-ad-box { width: 100%; min-height: 70px; background: #1e293b; text-align: center; border-bottom: 1px solid #334155; overflow: hidden; }
+        .footer-sticky-ad { position: fixed; bottom: 0; left: 0; width: 100%; min-height: 60px; background: #0f172a; border-top: 2px solid var(--accent-color); z-index: 999; text-align: center; overflow: hidden; }
+        .infeed-ad-box { width: 100%; min-height: 100px; background: #1e293b; border-radius: 8px; text-align: center; overflow: hidden; padding: 5px; }
+
         .modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center;
         }
-        .modal-content { background: var(--card-bg); padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; text-align: center; max-height: 90vh; overflow-y: auto; }
-        .close-btn { background: var(--accent-color); color: white; border: none; padding: 8px 16px; margin-top: 15px; border-radius: 4px; cursor: pointer; width: 100%; }
+        .modal-content { background: var(--card-bg); padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; text-align: center; }
+        .close-btn { background: var(--accent-color); color: white; border: none; padding: 10px 16px; margin-top: 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
         
         select, input { width: 100%; padding: 10px; background: #334155; border: none; color: white; border-radius: 4px; margin-bottom: 10px; }
+
+        .fixed-ad-box { background: #334155; width: 100%; height: 250px; display: flex; align-items: center; justify-content: center; border-radius: 6px; overflow: hidden; }
+        iframe.ad-iframe { width: 100%; height: 100%; border: none; overflow: hidden; }
     </style>
 </head>
-<body>
+<body onclick="triggerPopupAd()">
 
     <header>
         <div class="logo">🎥 VideoFlix</div>
@@ -57,6 +65,9 @@
             <button class="sub-btn" id="subHeaderBtn" onclick="openSubscription()">সাবস্ক্রিপশন নিন</button>
         </div>
     </header>
+
+    <!-- Header Banner Ad Space -->
+    <div class="header-ad-box" id="headerAdContainer"></div>
 
     <div class="categories">
         <div class="cat-chip active" onclick="filterCategory('all', this)">সব</div>
@@ -67,17 +78,27 @@
 
     <div class="video-container" id="videoList"></div>
 
+    <!-- Footer Sticky Banner Ad Space -->
+    <div class="footer-sticky-ad" id="footerAdContainer"></div>
+
+    <!-- Popup Code Executer Space -->
+    <div id="popupAdScriptSpace" style="display:none;"></div>
+
+    <!-- Pre-Roll Ad Modal -->
     <div class="modal" id="adModal">
         <div class="modal-content">
             <h3 id="adTitle">বিজ্ঞাপন চলছে...</h3>
-            <p id="adTimer" style="margin: 15px 0; color: var(--text-muted);">অপেক্ষা করুন...</p>
-            <div style="background: #334155; height: 150px; display: flex; align-items: center; justify-content: center; border-radius: 4px; overflow: hidden;">
-                <div id="dynamicAdContainer" style="color: var(--accent-color); font-weight: bold;">[Ad Space]</div>
+            <p id="adTimer" style="margin: 12px 0; color: #f59e0b; font-weight: bold;">অপেক্ষা করুন...</p>
+            
+            <div class="fixed-ad-box">
+                <iframe id="adIframe" class="ad-iframe"></iframe>
             </div>
+
             <button class="close-btn" id="skipAdBtn" disabled style="opacity: 0.5;">অপেক্ষা করুন...</button>
         </div>
     </div>
 
+    <!-- Subscription Modal -->
     <div class="modal" id="subModal">
         <div class="modal-content" style="text-align: left;">
             <h3 style="text-align: center; margin-bottom: 15px;">ভিআইপি সাবস্ক্রিপশন প্ল্যান</h3>
@@ -109,6 +130,8 @@
         let isVipActive = false;
         let videos = [];
         let currentFilter = 'all';
+        let adsData = {};
+        let popupTriggered = false;
 
         async function loadDataFromCloud() {
             try {
@@ -117,7 +140,10 @@
                 if(settings) {
                     if(settings.bkash) document.getElementById('bkashDisplay').innerText = settings.bkash;
                     if(settings.binance) document.getElementById('binanceDisplay').innerText = settings.binance;
-                    if(settings.adCode) document.getElementById('dynamicAdContainer').innerHTML = settings.adCode;
+                    if(settings.ads) {
+                        adsData = settings.ads;
+                        injectHeaderFooterAds();
+                    }
                 }
 
                 let vidRes = await fetch(`${DB_URL}/videos.json`);
@@ -134,6 +160,56 @@
             } catch(e) { console.error(e); }
         }
 
+        // সাধারণ এলিমেন্টে অ্যাড ইঞ্জেক্ট করা
+        function injectAdHtml(elementId, code) {
+            const container = document.getElementById(elementId);
+            if (!container || !code) return;
+            container.innerHTML = '';
+            const range = document.createRange();
+            range.selectNode(container);
+            const fragment = range.createContextualFragment(code);
+            container.appendChild(fragment);
+        }
+
+        function injectHeaderFooterAds() {
+            if(isVipActive) return;
+            if(adsData.header) injectAdHtml('headerAdContainer', adsData.header);
+            if(adsData.footer) injectAdHtml('footerAdContainer', adsData.footer);
+        }
+
+        function triggerPopupAd() {
+            if(!popupTriggered && adsData.popup && !isVipActive) {
+                popupTriggered = true;
+                injectAdHtml('popupAdScriptSpace', adsData.popup);
+            }
+        }
+
+        // মডালের ভেতর iframe দিয়ে ভিডিও অ্যাড লোড করা
+        function renderAdInsideModal() {
+            const iframe = document.getElementById('adIframe');
+            if (!iframe) return;
+
+            let iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.open();
+            
+            let htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { margin:0; padding:0; background:#334155; display:flex; justify-content:center; align-items:center; height:100vh; overflow:hidden; color:#fff; font-family:sans-serif; }
+                    </style>
+                </head>
+                <body>
+                    ${adsData.modal ? adsData.modal : (adsData.header ? adsData.header : '<p style="color:#94a3b8; font-size:14px;">[বিজ্ঞাপন লোড হচ্ছে...]</p>')}
+                </body>
+                </html>
+            `;
+
+            iframeDoc.write(htmlContent);
+            iframeDoc.close();
+        }
+
         async function checkVipStatus() {
             const userPhone = localStorage.getItem('myPhone');
             if(userPhone) {
@@ -147,6 +223,8 @@
                         document.getElementById('vipBadge').style.display = 'inline-block';
                         document.getElementById('subHeaderBtn').innerText = 'প্রিমিয়াম সক্রিয়';
                         document.getElementById('subHeaderBtn').style.background = '#64748b';
+                        document.getElementById('headerAdContainer').style.display = 'none';
+                        document.getElementById('footerAdContainer').style.display = 'none';
                         return;
                     }
                 }
@@ -168,7 +246,7 @@
                 return;
             }
 
-            filtered.forEach(video => {
+            filtered.forEach((video, index) => {
                 container.innerHTML += `
                     <div class="video-card" onclick="handleVideoClick('${video.url}')">
                         <img src="${video.thumb}" class="thumbnail" alt="thumb">
@@ -178,6 +256,12 @@
                         </div>
                     </div>
                 `;
+
+                // প্রতি ২টি ভিডিওর পর ইন-ফিড ব্যানার অ্যাড
+                if(!isVipActive && adsData.infeed && (index + 1) % 2 === 0) {
+                    container.innerHTML += `<div class="infeed-ad-box" id="infeed-ad-${index}"></div>`;
+                    setTimeout(() => { injectAdHtml(`infeed-ad-${index}`, adsData.infeed); }, 300);
+                }
             });
         }
 
@@ -198,61 +282,38 @@
         function startPreRollAds(url) {
             const modal = document.getElementById('adModal');
             modal.style.display = 'flex';
+            renderAdInsideModal();
 
-            runSingleAd(1, "প্রথম বিজ্ঞাপন", () => {
-                runSingleAd(2, "দ্বিতীয় বিজ্ঞাপন", () => {
+            runSingleAd(1, "প্রথম বিজ্ঞাপন", 10, () => {
+                renderAdInsideModal();
+                runSingleAd(2, "দ্বিতীয় বিজ্ঞাপন", 10, () => {
                     modal.style.display = 'none';
-                    setTimeout(() => { showMidRollAd(url); }, 3000); 
                     window.location.href = url;
                 });
             });
         }
 
-        function runSingleAd(adNumber, adName, onComplete) {
+        function runSingleAd(adNumber, adName, duration, onComplete) {
             const adTitle = document.getElementById('adTitle');
             const timerText = document.getElementById('adTimer');
             const skipBtn = document.getElementById('skipAdBtn');
             
             adTitle.innerText = `${adName} (${adNumber}/২) চলছে...`;
-            let timeLeft = 4; 
+            let timeLeft = duration; 
             skipBtn.disabled = true;
             skipBtn.style.opacity = 0.5;
+            skipBtn.innerText = "অপেক্ষা করুন...";
 
             const countdown = setInterval(() => {
                 timeLeft--;
-                timerText.innerText = `${timeLeft} সেকেন্ড বাকি...`;
+                timerText.innerText = `বিজ্ঞাপন শেষ হতে ${timeLeft} সেকেন্ড বাকি...`;
                 if (timeLeft <= 0) {
                     clearInterval(countdown);
                     timerText.innerText = `${adName} সম্পন্ন!`;
                     skipBtn.disabled = false;
                     skipBtn.style.opacity = 1;
-                    skipBtn.innerText = adNumber === 1 ? "পরবর্তী বিজ্ঞাপন দেখুন" : "ভিডিও দেখুন";
+                    skipBtn.innerText = adNumber === 1 ? "পরবর্তী বিজ্ঞাপন দেখুন ➡️" : "ভিডিও দেখুন ▶️";
                     skipBtn.onclick = () => { onComplete(); };
-                }
-            }, 1000);
-        }
-
-        function showMidRollAd(url) {
-            const modal = document.getElementById('adModal');
-            const adTitle = document.getElementById('adTitle');
-            const timerText = document.getElementById('adTimer');
-            const skipBtn = document.getElementById('skipAdBtn');
-            
-            modal.style.display = 'flex';
-            adTitle.innerText = "⚠️ স্পন্সরড মিড-রোল বিজ্ঞাপন";
-            let timeLeft = 3;
-            skipBtn.disabled = true;
-
-            const midCountdown = setInterval(() => {
-                timeLeft--;
-                timerText.innerText = `বিজ্ঞাপন শেষ হতে ${timeLeft} সেকেন্ড...`;
-                if (timeLeft <= 0) {
-                    clearInterval(midCountdown);
-                    timerText.innerText = "বিজ্ঞাপন শেষ!";
-                    skipBtn.disabled = false;
-                    skipBtn.style.opacity = 1;
-                    skipBtn.innerText = "ভিডিওতে ফিরে যান";
-                    skipBtn.onclick = () => { modal.style.display = 'none'; };
                 }
             }, 1000);
         }
@@ -267,12 +328,12 @@
             const fileInput = document.getElementById('paymentScreenshot');
 
             if(!phone || !trx) {
-                alert("দয়া করে আপনার ফোন নম্বর/অ্যাকাউন্ট এবং ট্রানজেকশন আইডি দিন।");
+                alert("দয়া করে নম্বর/অ্যাকাউন্ট এবং TrxID দিন।");
                 return;
             }
 
             if(fileInput.files.length === 0) {
-                alert("দয়া করে পেমেন্টের স্ক্রিনশট আপلود করুন!");
+                alert("দয়া করে পেমেন্টের স্ক্রিনশট আপলোড করুন!");
                 return;
             }
 
@@ -298,10 +359,10 @@
                         })
                     });
 
-                    alert("আপনার পেমেন্ট ও স্ক্রিনশট সফলভাবে জমা হয়েছে! অ্যাডমিন যাচাই করে সাবস্ক্রিপশন সক্রিয় করে দিবেন।");
+                    alert("পেমেন্ট সফলভাবে জমা হয়েছে!");
                     closeSubscription();
                 } catch(e) {
-                    alert("পেমেন্ট সাবমিট করতে সমস্যা হয়েছে!");
+                    alert("পেমেন্ট জমা করা যায়নি!");
                 }
             };
 
